@@ -1,0 +1,8 @@
+{
+  "name": "Remix: Password Saver, Generator and Hash Creator",
+  "description": "A high-security, responsive, and cloud-sync credentials vault, password entropy generator, and multi-algorithm cryptographic hash creator.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

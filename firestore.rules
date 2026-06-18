@@ -1,0 +1,71 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper Functions
+    function isValidId(id) { 
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+    }
+    
+    function isSignedIn() { 
+      return request.auth != null; 
+    }
+
+    // Rules for Hustle Items
+    match /hustleItems/{itemId} {
+      // Allow single get and list queries to users who own the documents
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      // Allow creation of verified hustleItems
+      allow create: if isSignedIn() 
+        && isValidId(itemId)
+        && request.auth.token.email_verified == true
+        && request.resource.data.id == itemId
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.title is string && request.resource.data.title.size() >= 1 && request.resource.data.title.size() <= 64
+        && request.resource.data.username is string && request.resource.data.username.size() >= 1 && request.resource.data.username.size() <= 128
+        && request.resource.data.password is string && request.resource.data.password.size() >= 1 && request.resource.data.password.size() <= 1024
+        && request.resource.data.category is string && request.resource.data.category in ['Login', 'Social', 'Finance', 'Work', 'Secure Note', 'Other']
+        && request.resource.data.createdAt is string && request.resource.data.createdAt.size() <= 64
+        && request.resource.data.updatedAt is string && request.resource.data.updatedAt.size() <= 64;
+        
+      // Allow update of owned records
+      allow update: if isSignedIn()
+        && isValidId(itemId)
+        && request.auth.token.email_verified == true
+        && request.resource.data.userId == request.auth.uid
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt is string && request.resource.data.updatedAt.size() <= 64;
+        
+      // Allow deletion of owned records
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid && isValidId(itemId);
+    }
+
+    // Rules for Hash Records
+    match /hashRecords/{recordId} {
+      // Allow single get and list queries to users who own the documents
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      // Allow creation of verified hashRecords
+      allow create: if isSignedIn()
+        && isValidId(recordId)
+        && request.auth.token.email_verified == true
+        && request.resource.data.id == recordId
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.text is string && request.resource.data.text.size() <= 1000
+        && request.resource.data.algorithm is string && request.resource.data.algorithm.size() <= 32
+        && request.resource.data.hashValue is string && request.resource.data.hashValue.size() <= 256
+        && request.resource.data.createdAt is string && request.resource.data.createdAt.size() <= 64;
+        
+      // Allow deletion of owned records
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid && isValidId(recordId);
+    }
+  }
+}
